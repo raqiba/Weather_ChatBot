@@ -5,9 +5,12 @@ Chat Agent - Main coordinator that processes user queries and determines appropr
 import json
 import os
 from typing import Dict, Any, List
+from dotenv import load_dotenv
 from google import genai
 from agents.weather_agent import WeatherAgent
 
+# Load environment variables
+load_dotenv()
 # Configure APIs
 WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
 

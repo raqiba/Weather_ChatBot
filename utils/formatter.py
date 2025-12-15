@@ -18,13 +18,13 @@ def format_current_weather_md(data: Dict[str, Any]) -> str:
     wind = data.get("wind_speed")
 
     md = f"""
-**📍 {data.get('city')}**  
-**🌡 Temperature:** `{temp:.1f}{unit_sym}`  
-**☁ Condition:** {cond}  
-**💧 Humidity:** {humidity}%  
-**💨 Wind:** {wind} m/s  
-> _Updated:_ {updated_str}
-"""
+        **📍 {data.get('city')}**  
+        **🌡 Temperature:** `{temp:.1f}{unit_sym}`  
+        **☁ Condition:** {cond}  
+        **💧 Humidity:** {humidity}%  
+        **💨 Wind:** {wind} m/s  
+        > _Updated:_ {updated_str}
+        """
     return md
 
 

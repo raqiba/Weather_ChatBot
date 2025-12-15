@@ -50,52 +50,183 @@ def main():
     st.set_page_config(page_title="Weather Agent Chatbot", page_icon="🌤️", layout="wide")
     
     # Custom CSS for better UI with dark theme
+#     st.markdown("""
+#         <style>
+#         .stApp {
+#             background-color: #0e1117;
+#             color: #fafafa;
+#         }
+#         .stTextInput > label {
+#             color: #fafafa;
+#         }
+#         .stTextInput > div > input {
+#             background-color: #262730;
+#             color: #fafafa;
+#             border: 1px solid #4a4a4a;
+#         }
+#         .stButton > button {
+#             background-color: #1f77b4;
+#             color: white;
+#         }
+#         .chat-message {
+#             padding: 1.5rem;
+#             border-radius: 0.5rem;
+#             margin-bottom: 1rem;
+#         }
+#         .user-message {
+#             background-color: #262730;
+#             border-left: 5px solid #1f77b4;
+#             color: #fafafa;
+#         }
+#         .assistant-message {
+#             background-color: #262730;
+#             border-left: 5px solid #2ca02c;
+#             color: #fafafa;
+#         }
+#         h1, h2, h3, h4, h5, h6 {
+#             color: #fafafa;
+#         }
+#         /* Sidebar background and text */
+# [data-testid="stSidebar"] {
+#     background-color: #0e1119 !important; /* dark background */
+#     color: #fafafa !important; /* light text */
+# }
+
+# /* Sidebar headers and text */
+# [data-testid="stSidebar"] * {
+#     color: #fafafa !important;
+# }
+
+# /* Sidebar links */
+# [data-testid="stSidebar"] a {
+#     color: #1f77b4 !important; /* blue links */
+#     text-decoration: none;
+# }
+
+# /* Hover effect for links */
+# [data-testid="stSidebar"] a:hover {
+#     color: #63b3ed !important; /* lighter blue on hover */
+# }
+
+#         </style>
+#     """, unsafe_allow_html=True)
+    
+
+    # Custom CSS for dark theme UI
     st.markdown("""
         <style>
+        /* App background and general text */
         .stApp {
-            background-color: #0e1117;
-            color: #fafafa;
+            background-color: #0f121a;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
+
+        /* Headers */
+        h1, h2, h3, h4, h5, h6 {
+            color: #ffffff;
+        }
+
+        /* Text Inputs */
         .stTextInput > label {
-            color: #fafafa;
+            color: #e0e0e0;
         }
         .stTextInput > div > input {
-            background-color: #262730;
-            color: #fafafa;
+            background-color: #1f202a;
+            color: #ffffff;
             border: 1px solid #4a4a4a;
+            border-radius: 0.4rem;
+            padding: 0.4rem 0.6rem;
         }
+
+        /* Buttons */
         .stButton > button {
-            background-color: #1f77b4;
+            background-color: #4a90e2;
             color: white;
-        }
-        .chat-message {
-            padding: 1.5rem;
+            border: none;
             border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+        .stButton > button:hover {
+            background-color: #6aa9f7;
+            color: white;
+            cursor: pointer;
+            transform: translateY(-1px);
+        }
+
+        /* Chat messages */
+        .chat-message {
+            padding: 1.2rem 1.5rem;
+            border-radius: 1rem;
             margin-bottom: 1rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            font-family: 'Courier New', monospace;
         }
         .user-message {
-            background-color: #262730;
-            border-left: 5px solid #1f77b4;
-            color: #fafafa;
+            background-color: #1c1f28;
+            border-left: 6px solid #4a90e2;
+            color: #e0e0e0;
         }
         .assistant-message {
-            background-color: #262730;
-            border-left: 5px solid #2ca02c;
-            color: #fafafa;
+            background-color: #20232b;
+            border-left: 6px solid #50c878;
+            color: #e0e0e0;
         }
-        h1, h2, h3, h4, h5, h6 {
-            color: #fafafa;
+
+        /* Sidebar background and text */
+        [data-testid="stSidebar"] {
+            background-color: #0d1018 !important;
+            color: #e0e0e0 !important;
         }
-        .sidebar .sidebar-content {
-            background-color: #0e1117;
-            color: #fafafa;
+
+        /* Sidebar text, labels, and widgets */
+        [data-testid="stSidebar"] * {
+            color: #e0e0e0 !important;
         }
-        .sidebar .sidebar-content a {
-            color: #1f77b4;
+
+        /* Sidebar links */
+        [data-testid="stSidebar"] a {
+            color: #4a90e2 !important;
+            text-decoration: none;
+        }
+        [data-testid="stSidebar"] a:hover {
+            color: #6aa9f7 !important;
+        }
+
+        /* Sidebar input widgets */
+        [data-testid="stSidebar"] input, 
+        [data-testid="stSidebar"] textarea, 
+        [data-testid="stSidebar"] select {
+            background-color: #1f202a !important;
+            color: #ffffff !important;
+            border: 1px solid #4a4a4a !important;
+            border-radius: 0.4rem !important;
+            padding: 0.4rem 0.6rem !important;
+        }
+
+        /* Sidebar buttons */
+        [data-testid="stSidebar"] button {
+            background-color: #4a90e2 !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 0.5rem !important;
+            padding: 0.5rem 1rem !important;
+            font-weight: 500 !important;
+            transition: all 0.2s ease !important;
+        }
+        [data-testid="stSidebar"] button:hover {
+            background-color: #6aa9f7 !important;
+            cursor: pointer;
+            transform: translateY(-1px);
         }
         </style>
     """, unsafe_allow_html=True)
-    
+
+
     st.title("🌤️ Weather Agent Chatbot")
     st.markdown("Ask me anything about weather! I can provide current weather, forecasts, and general weather information.")
     
