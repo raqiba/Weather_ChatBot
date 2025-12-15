@@ -5,14 +5,18 @@ Chat Agent - Main coordinator that processes user queries and determines appropr
 import json
 import os
 from typing import Dict, Any, List
-from dotenv import load_dotenv
 from google import genai
 from agents.weather_agent import WeatherAgent
+from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 # Configure APIs
-WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
+TOMORROW_API_KEY = os.getenv("TOMORROW_API_KEY")
+print("Weather API key loaded in chat_agent:", bool(TOMORROW_API_KEY))
+if TOMORROW_API_KEY:
+    print("Weather API key length:", len(TOMORROW_API_KEY))
+else:
+    print("Available environment variables:", list(os.environ.keys()))
 
 
 class ChatAgent:
@@ -20,8 +24,7 @@ class ChatAgent:
     
     def __init__(self, client: genai.Client):
         self.model = client
-        self.weather_agent = WeatherAgent(WEATHER_API_KEY)
-        
+        self.weather_agent = WeatherAgent(TOMORROW_API_KEY)
     
     def process_query(self, user_query: str, chat_history: List[Dict[str, str]]) -> Dict[str, Any]:
         """Process user query and determine appropriate action."""
@@ -102,75 +105,213 @@ class ChatAgent:
         parameters = action_data.get("parameters", {})
         
         if action == "current_weather":
-            city = parameters.get("city")
-            if city:
-                weather_data = self.weather_agent.get_current_weather(city)
+            location = parameters.get("location") or parameters.get("city")
+            if location:
+                print(f"Fetching current weather for: {location}")
+                weather_data = self.weather_agent.get_current_weather(location)
+                print(f"Weather data received: {type(weather_data)}")
                 if "error" in weather_data:
-                    return f"Sorry, I couldn't get the weather information for {city}. Error: {weather_data['error']}"
+                    print(f"Weather API error: {weather_data['error']}")
+                    return f"Sorry, I couldn't get the weather information for {location}. Error: {weather_data['error']}"
                 
-                # Return structured data for current weather
+                # Send raw weather data to LLM for natural language composition
+                context = "\n".join([f"User: {msg['content']}" if msg['role'] == 'user' else f"Assistant: {msg['content']}" 
+                                    for msg in chat_history[-3:]])  # Last 3 messages for context
+                
+                prompt = f"""
+                You are a helpful weather assistant. The user asked about the current weather in {location}.
+                Here is the raw weather data from the Tomorrow.io API:
+                
+                {json.dumps(weather_data, indent=2)}
+                
+                Please provide a friendly, natural language response that includes the most important information.
+                Focus on these key aspects:
+                1. Current temperature and how it feels
+                2. Weather conditions (sunny, cloudy, rainy, etc.)
+                3. Humidity and wind information
+                4. Any notable weather phenomena
+                
+                Format your response in a clear, readable way. You can use formatting if appropriate.
+                Keep your response concise but informative. Use emojis where appropriate to make it visually appealing.
+                Do not include the raw JSON data in your response - translate it into natural language.
+                
+                Recent conversation context:
+                {context}
+                
+                User's question: {user_query}
+                """
+                
                 try:
-                    # Extract values with proper type checking
-                    main_data = weather_data.get('main', {}) if isinstance(weather_data.get('main'), dict) else {}
-                    weather_list = weather_data.get('weather', []) if isinstance(weather_data.get('weather'), list) else []
-                    wind_data = weather_data.get('wind', {}) if isinstance(weather_data.get('wind'), dict) else {}
-                    
-                    temp = main_data.get('temp') if isinstance(main_data, dict) else None
-                    description = weather_list[0].get('description') if isinstance(weather_list, list) and len(weather_list) > 0 and isinstance(weather_list[0], dict) else 'Unknown'
-                    humidity = main_data.get('humidity') if isinstance(main_data, dict) else None
-                    wind_speed = wind_data.get('speed') if isinstance(wind_data, dict) else None
-                    updated = weather_data.get('dt') if isinstance(weather_data, dict) else None
-                    
-                    # Validate that we have the required data
-                    if temp is None or humidity is None or wind_speed is None:
-                        return "Sorry, some weather data is missing."
+                    print("Sending request to Gemini AI...")
+                    response = self.model.models.generate_content(
+                        model="gemini-2.5-flash",
+                        contents=prompt
+                    )
+                    print("Received response from Gemini AI")
+                    # Access the text content properly
+                    if hasattr(response, 'text'):
+                        return response.text
+                    else:
+                        # Handle different response format
+                        return str(response)
+                except Exception as e:
+                    print(f"Gemini AI error: {str(e)}")
+                    # Fallback to extracting key information if LLM fails
+                    try:
+                        # Extract key information from Tomorrow.io response
+                        data = weather_data.get('data', {})
+                        values = data.get('values', {}) if isinstance(data, dict) else {}
+                        location_info = weather_data.get('location', {}) if isinstance(weather_data, dict) else {}
                         
-                    # Ensure description is a string
-                    if description is None:
-                        description = 'Unknown'
-                    elif not isinstance(description, str):
-                        description = str(description)
-                    
-                    # Return structured data
-                    return {
-                        "type": "current",
-                        "city": city,
-                        "units": "metric",
-                        "temp": temp,
-                        "condition": description,
-                        "humidity": humidity,
-                        "wind_speed": wind_speed,
-                        "updated": updated
-                    }
-                except (KeyError, IndexError, TypeError) as e:
-                    return f"Sorry, I couldn't parse the weather data. Error: {str(e)}"
+                        # Extract values
+                        temp = values.get('temperature')
+                        apparent_temp = values.get('temperatureApparent')
+                        humidity = values.get('humidity')
+                        wind_speed = values.get('windSpeed')
+                        wind_direction = values.get('windDirection')
+                        weather_code = values.get('weatherCode')
+                        visibility = values.get('visibility')
+                        
+                        # Get location name
+                        loc_name = location_info.get('name', location) if isinstance(location_info, dict) else location
+                        
+                        # Create a simple text response
+                        response_text = f"🌤️ Current weather in {loc_name}:\n\n"
+                        if temp is not None:
+                            response_text += f"🌡️ Temperature: {temp}°C"
+                            if apparent_temp is not None:
+                                response_text += f" (Feels like {apparent_temp}°C)\n"
+                            else:
+                                response_text += "\n"
+                        if humidity is not None:
+                            response_text += f"💧 Humidity: {humidity}%\n"
+                        if wind_speed is not None:
+                            direction = f" from {wind_direction}°" if wind_direction is not None else ""
+                            response_text += f"💨 Wind: {wind_speed} m/s{direction}\n"
+                        if visibility is not None:
+                            response_text += f"👁️ Visibility: {visibility} km\n"
+                        
+                        return response_text or "Unable to extract weather information."
+                    except (KeyError, IndexError, TypeError) as e:
+                        return f"Sorry, I couldn't parse the weather data. Error: {str(e)}"
             else:
-                return "Please specify a city to get the current weather."
+                return "Please specify a location to get the current weather."
         
         elif action == "forecast":
-            city = parameters.get("city")
+            location = parameters.get("location") or parameters.get("city")
             days = parameters.get("days", 5)
-            if city:
-                forecast_data = self.weather_agent.get_forecast(city)
+            if location:
+                print(f"Fetching forecast for: {location}")
+                forecast_data = self.weather_agent.get_forecast(location)
+                print(f"Forecast data received: {type(forecast_data)}")
                 if "error" in forecast_data:
-                    return f"Sorry, I couldn't get the forecast for {city}. Error: {forecast_data['error']}"
+                    print(f"Forecast API error: {forecast_data['error']}")
+                    return f"Sorry, I couldn't get the forecast for {location}. Error: {forecast_data['error']}"
                 
-                # Return structured data for forecast
+                # Send raw forecast data to LLM for natural language composition
+                context = "\n".join([f"User: {msg['content']}" if msg['role'] == 'user' else f"Assistant: {msg['content']}" 
+                                    for msg in chat_history[-3:]])  # Last 3 messages for context
+                
+                prompt = f"""
+                You are a helpful weather assistant. The user asked for a weather forecast for {location}.
+                Here is the raw forecast data from the Tomorrow.io API:
+                
+                {json.dumps(forecast_data, indent=2)}
+                
+                Please provide a friendly, natural language response that includes the most important information.
+                Organize the forecast in a clear, readable format, day by day.
+                For each day/time period, include:
+                1. Date and time
+                2. Temperature (and feels like temperature if available)
+                3. Weather conditions
+                4. Precipitation probability
+                5. Wind information
+                6. Notable weather phenomena
+                
+                You can use formatting, lists, or any other format that best presents the data.
+                Use emojis to make the forecast visually appealing.
+                Keep your response concise but informative.
+                Do not include the raw JSON data in your response - translate it into natural language.
+                
+                Recent conversation context:
+                {context}
+                
+                User's question: {user_query}
+                """
+                
                 try:
-                    forecast_list = forecast_data.get('list', [])[:days*8]  # 8 forecasts per day (every 3 hours)
-                    
-                    # Return structured data
-                    return {
-                        "type": "forecast",
-                        "city": city,
-                        "units": "metric",
-                        "days": days,
-                        "list": forecast_list
-                    }
-                except (KeyError, IndexError, TypeError, ValueError) as e:
-                    return f"Sorry, I couldn't parse the forecast data. Error: {str(e)}"
+                    print("Sending forecast request to Gemini AI...")
+                    response = self.model.models.generate_content(
+                        model="gemini-2.5-flash",
+                        contents=prompt
+                    )
+                    print("Received forecast response from Gemini AI")
+                    # Access the text content properly
+                    if hasattr(response, 'text'):
+                        return response.text
+                    else:
+                        # Handle different response format
+                        return str(response)
+                except Exception as e:
+                    print(f"Gemini AI forecast error: {str(e)}")
+                    # Fallback to extracting key information if LLM fails
+                    try:
+                        # Extract key information from Tomorrow.io forecast response
+                        timelines = forecast_data.get('timelines', {})
+                        location_info = forecast_data.get('location', {}) if isinstance(forecast_data, dict) else {}
+                        
+                        # Get location name
+                        loc_name = location_info.get('name', location) if isinstance(location_info, dict) else location
+                        
+                        # Process timeline data - handle different timeline types
+                        if timelines and isinstance(timelines, dict):
+                            # Try to get minutely data first, then hourly, then daily
+                            forecast_entries = []
+                            if 'minutely' in timelines and isinstance(timelines['minutely'], list):
+                                forecast_entries = timelines['minutely']
+                            elif 'hourly' in timelines and isinstance(timelines['hourly'], list):
+                                forecast_entries = timelines['hourly']
+                            elif 'daily' in timelines and isinstance(timelines['daily'], list):
+                                forecast_entries = timelines['daily']
+                            
+                            if forecast_entries:
+                                response_text = f"🌤️ Weather forecast for {loc_name}:\n\n"
+                                
+                                # Show first few entries
+                                for i, entry in enumerate(forecast_entries[:10]):  # Show first 10 entries
+                                    if isinstance(entry, dict):
+                                        time = entry.get('time', 'N/A')
+                                        values = entry.get('values', {}) if isinstance(entry, dict) else {}
+                                        
+                                        # Extract values
+                                        temp = values.get('temperature')
+                                        apparent_temp = values.get('temperatureApparent')
+                                        humidity = values.get('humidity')
+                                        wind_speed = values.get('windSpeed')
+                                        weather_code = values.get('weatherCode')
+                                        precipitation_prob = values.get('precipitationProbability')
+                                        
+                                        response_text += f"⏰ {time}:\n"
+                                        if temp is not None:
+                                            temp_str = f"{temp}°C"
+                                            if apparent_temp is not None:
+                                                temp_str += f" (Feels like {apparent_temp}°C)"
+                                            response_text += f"   🌡️ {temp_str}\n"
+                                        if humidity is not None:
+                                            response_text += f"   💧 Humidity: {humidity}%\n"
+                                        if precipitation_prob is not None:
+                                            response_text += f"   🌧️ Precipitation: {precipitation_prob}%\n"
+                                        if wind_speed is not None:
+                                            response_text += f"   💨 Wind: {wind_speed} m/s\n"
+                                        response_text += "\n"
+                                
+                                return response_text
+                                
+                        return "Unable to extract forecast information."
+                    except (KeyError, IndexError, TypeError, ValueError) as e:
+                        return f"Sorry, I couldn't parse the forecast data. Error: {str(e)}"
             else:
-                return "Please specify a city to get the weather forecast."
+                return "Please specify a location to get the weather forecast."
         
         else:  # general action
             # Use Gemini for general weather questions
@@ -179,7 +320,7 @@ class ChatAgent:
             
             prompt = f"""
             You are a helpful weather assistant. Answer the user's question based on your knowledge about weather.
-            Keep your responses concise and informative.
+            Keep your responses concise and informative. Use emojis where appropriate to make your responses visually appealing.
             
             Conversation history:
             {context}

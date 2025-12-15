@@ -1,5 +1,9 @@
 """
 Utility functions for formatting weather data into markdown
+
+NOTE: These functions are no longer used in the main application flow since we now
+send the raw API data to the LLM for natural language composition. However, they
+are kept for backward compatibility and potential future use.
 """
 
 import pandas as pd
@@ -18,13 +22,13 @@ def format_current_weather_md(data: Dict[str, Any]) -> str:
     wind = data.get("wind_speed")
 
     md = f"""
-        **📍 {data.get('city')}**  
-        **🌡 Temperature:** `{temp:.1f}{unit_sym}`  
-        **☁ Condition:** {cond}  
-        **💧 Humidity:** {humidity}%  
-        **💨 Wind:** {wind} m/s  
-        > _Updated:_ {updated_str}
-        """
+**📍 {data.get('city')}**  
+**🌡 Temperature:** `{temp:.1f}{unit_sym}`  
+**☁ Condition:** {cond}  
+**💧 Humidity:** {humidity}%  
+**💨 Wind:** {wind} m/s  
+> _Updated:_ {updated_str}
+"""
     return md
 
 
