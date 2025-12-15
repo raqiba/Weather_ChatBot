@@ -36,7 +36,8 @@ Weather_Project/
 1. Python 3.7 or higher
 2. API keys for:
    - Google Gemini API ([Get it here](https://ai.google.dev/))
-   - OpenWeatherMap API ([Get it here](https://openweathermap.org/api))
+   - OpenWeatherMap API ([Get it here](https://app.tomorrow.io/development/keys))
+   - 
 
 ## Setup
 
@@ -51,7 +52,7 @@ Weather_Project/
 3. Create a `.env` file in the project root with your API keys:
    ```
    GEMINI_API_KEY=your_gemini_api_key_here
-   WEATHER_API_KEY=your_openweathermap_api_key_here
+   Tomorrow_API_KEY=your_openweathermap_api_key_here
    ```
 
 ### Option 2: Windows Setup
