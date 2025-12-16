@@ -1,6 +1,6 @@
 # Weather Agent Chatbot
 
-An agentic-based weather chatbot built with Streamlit that integrates Google Gemini AI and OpenWeatherMap API to provide weather information and answer weather-related questions.
+An agentic-based weather chatbot built with Streamlit that integrates Google Gemini AI and Tomorrow.io Weather API to provide weather information and answer weather-related questions.
 
 ## Project Structure
 
@@ -8,7 +8,7 @@ An agentic-based weather chatbot built with Streamlit that integrates Google Gem
 Weather_Project/
 ├── agents/
 │   ├── __init__.py
-│   ├── weather_agent.py      # Handles OpenWeatherMap API interactions
+│   ├── weather_agent.py      # Handles Tomorrow.io Weather API interactions
 │   └── chat_agent.py         # Main coordinator that processes user queries
 ├── core/
 │   ├── __init__.py
@@ -25,7 +25,7 @@ Weather_Project/
 
 ## Features
 
-- Current weather information for any city
+- Current weather information for any location
 - Weather forecasts for upcoming days
 - General weather knowledge using AI
 - Conversational interface with chat history
@@ -85,7 +85,7 @@ The app will open in your default browser. You can ask questions like:
 The application uses an agentic architecture with specialized agents:
 
 ### 1. WeatherAgent (`agents/weather_agent.py`)
-- Handles all interactions with the OpenWeatherMap API
+- Handles all interactions with the Tomorrow.io Weather API
 - Provides methods for current weather and forecast data
 - Includes robust error handling for API issues
 
@@ -113,7 +113,7 @@ The application uses an agentic architecture with specialized agents:
    - Current weather requests are handled by WeatherAgent
    - Forecast requests are handled by WeatherAgent
    - General questions are answered using Gemini AI
-4. Results are formatted using the formatter utilities
+4. Results are sent to the LLM for natural language composition
 5. Formatted results are presented to the user in a conversational interface
 
 ## Troubleshooting
